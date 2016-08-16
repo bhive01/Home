@@ -9,6 +9,7 @@ import math
 import numpy as np
 import zbar
 import imutils
+import pydecodeqr
 
 def distance(p, q):
 	return math.sqrt(math.pow(math.fabs(p[0]-q[0]),2)+math.pow(math.fabs(p[1]-q[1]),2))
@@ -217,6 +218,10 @@ for frame in camera.capture_continuous(rawCapture,format="bgr",use_video_port=Tr
 	image = frame.array
 	img = image
 	
+	qrdata = pydecodeqr.decode(img.tostring())
+	print "pydecodeqr"	
+	print qrdata	
+	
 	# decode QR code using zbar
 	scanner = zbar.ImageScanner()
 	scanner.parse_config('enable')
@@ -224,6 +229,7 @@ for frame in camera.capture_continuous(rawCapture,format="bgr",use_video_port=Tr
 	scanner.scan(imagez)
 	for symbol in imagez:
 		x = symbol.data
+		print "zbar"		
 		print x
 	
 	edges = cv2.Canny(image,100,200)
@@ -243,7 +249,7 @@ for frame in camera.capture_continuous(rawCapture,format="bgr",use_video_port=Tr
 	# cycle through moment data and compute location for each moment
 	for m in mu:
 		if m['m00'] != 0:
-			mc.append((m['m10']/m['m00'],m['m01']/m['m00']))
+			mc.append((m['m10']/m['m00'], m['m01']/m['m00']))
 		else:
 			mc.append((0,0))
 	
@@ -336,18 +342,18 @@ for frame in camera.capture_continuous(rawCapture,format="bgr",use_video_port=Tr
 			O = updateCornerOr(orientation, tempO)
 			
 			iflag, N = getIntersection(M[1],M[2],O[3],O[2],N)
-
-			src.append(L[0]+7)
-			src.append(M[1]+7)
-			src.append(N+7)
-			src.append(O[3]+7)
+			
+			src.append(L[0])
+			src.append(M[1])
+			src.append(N)
+			src.append(O[3])
 			src = np.asarray(src, np.float32)
-
+			
 			warped = four_point_transform(img, src)
 			
 			# show angle corrected QR code
 			cv2.imshow("warped", warped)
-       			cv2.circle(img, N, 1, (0,0,255), 2)
+       			cv2.circle(img, Ntuple, 1, (0,0,255), 2)
 			
 			# draw colored squares to show detection is working			
 			cv2.drawContours(img,contours,top,(255,0,0),2)
