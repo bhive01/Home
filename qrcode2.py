@@ -1,15 +1,15 @@
-import serial
+import serial # pip install pyserial
 from picamera.array import PiRGBArray
 from picamera import PiCamera
-import trans
+import trans #pip install trans
 import argparse
 import time
 import cv2
 import math
 import numpy as np
-import zbar
+import zbar # sudo apt-get install libzbar-dev \ pip install zbar
 import imutils
-import pydecodeqr
+# import pydecodeqr
 
 def distance(p, q):
 	return math.sqrt(math.pow(math.fabs(p[0]-q[0]),2)+math.pow(math.fabs(p[1]-q[1]),2))
@@ -168,10 +168,19 @@ def order_points(pts):
 	# return the ordered coordinates
 	return rect
 
-def four_point_transform(image, pts):
+def four_point_transform(image, pts, expand):
 	# obtain a consistent order of the points and unpack them
 	# individually
+
 	rect = order_points(pts)
+	
+	# expand allows border around code in px
+	if expand != 0:
+ 		rect[0] = rect[0] + (-1*expand, -1*expand)
+ 		rect[1] = rect[1] + (expand, -1*expand)
+ 		rect[2] = rect[2] + (expand, expand)
+ 		rect[3] = rect[3] + (-1*expand, expand)
+
 	(tl, tr, br, bl) = rect
  
 	# compute the width of the new image, which will be the
@@ -206,11 +215,9 @@ def four_point_transform(image, pts):
 	# return the warped image
 	return warped
 
-
-
 camera = PiCamera()
 camera.resolution = (640, 480)
-camera.framerate = 1
+camera.framerate = 25
 rawCapture = PiRGBArray(camera,size=(640, 480))
 time.sleep(0.1)
 
@@ -218,9 +225,9 @@ for frame in camera.capture_continuous(rawCapture,format="bgr",use_video_port=Tr
 	image = frame.array
 	img = image
 	
-	qrdata = pydecodeqr.decode(img.tostring())
-	print "pydecodeqr"	
-	print qrdata	
+	#qrdata = pydecodeqr.decode(img.tostring())
+	#print("pydecodeqr")	
+	#print qrdata	
 	
 	# decode QR code using zbar
 	scanner = zbar.ImageScanner()
@@ -229,8 +236,7 @@ for frame in camera.capture_continuous(rawCapture,format="bgr",use_video_port=Tr
 	scanner.scan(imagez)
 	for symbol in imagez:
 		x = symbol.data
-		print "zbar"		
-		print x
+		print(x)
 	
 	edges = cv2.Canny(image,100,200)
 	# show canny edge detection
@@ -256,7 +262,7 @@ for frame in camera.capture_continuous(rawCapture,format="bgr",use_video_port=Tr
 	# hierarchy lets us find nested squares in QR corners
 	# http://www.docs.opencv.org/master/d9/d8b/tutorial_py_contours_hierarchy.html
 	# http://dsynflo.blogspot.com/2014/10/opencv-qr-code-detection-and-extraction.html
-	# extra nested squares could cause errors	
+	# extra nested squares could cause errors
 	for x in range(0, len(contours)):
 		k=x		#reset k every loop
 		c = 0	#reset c every loop
@@ -342,19 +348,19 @@ for frame in camera.capture_continuous(rawCapture,format="bgr",use_video_port=Tr
 			O = updateCornerOr(orientation, tempO)
 			
 			iflag, N = getIntersection(M[1],M[2],O[3],O[2],N)
-			
+
 			src.append(L[0])
 			src.append(M[1])
 			src.append(N)
 			src.append(O[3])
 			src = np.asarray(src, np.float32)
 			
-			warped = four_point_transform(img, src)
+			warped = four_point_transform(img, src, 10)
 			
 			# show angle corrected QR code
 			cv2.imshow("warped", warped)
-       			cv2.circle(img, Ntuple, 1, (0,0,255), 2)
-			
+			cv2.circle(img, N,1,(0,0,255),2)
+       			
 			# draw colored squares to show detection is working			
 			cv2.drawContours(img,contours,top,(255,0,0),2)
 			cv2.drawContours(img,contours,right,(0,255,0),2)
@@ -369,7 +375,7 @@ for frame in camera.capture_continuous(rawCapture,format="bgr",use_video_port=Tr
 			scanner.scan(imagez)
 			for symbol in imagez:
 				x = symbol.data
-				print x
+				print(x)
 	
 	# show the image
 	cv2.imshow("rect",img)
